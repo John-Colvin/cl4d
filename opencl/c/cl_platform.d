@@ -191,25 +191,28 @@ mixin(genCLVectorTypes());
 /**
  * Macro to facilitate debugging
  * Usage:
- *   Place mixin(CL_PROGRAM_STRING_DEBUG_INFO) on the line before the first line of your source.
+ *   Place clDbgInfo!() on the line before the first line of your source.
  *   The first line ends with:   CL_PROGRAM_STRING_BEGIN \"
  *   Each line thereafter of OpenCL C source must have a line end
  *   The last line is empty;
  *
  *   Example:
  *
- *   string code = mixin(CL_PROGRAM_STRING_DEBUG_INFO) ~ q{
- *   kernel void foo( int a, float * b )
- *   {
- *      // my comment
- *      *b[ get_global_id(0)] = a;
- *   }
- *	 };
+ *   string code = clDbgInfo!() ~ q{
+ *       kernel void foo( int a, float * b )
+ *       {
+ *          // my comment
+ *          *b[ get_global_id(0)] = a;
+ *       }
+ *   };
  *
  * This should correctly set up the line, (column) and file information for your source
  * string so you can do source level debugging.
  */
-enum CL_PROGRAM_STRING_DEBUG_INFO = `"#line " ~ __LINE__.stringof ~ " \"" ~ __FILE__ ~ "\" \n\n"`;
+template clDbgInfo(ulong line = __LINE__, string file = __FILE__)
+{
+    enum clDbgInfo = "#line " ~ line.to!string() ~ " \"" ~ file ~ "\" \n\n";
+}
 
 
 /**************************************************

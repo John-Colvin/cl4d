@@ -5,11 +5,6 @@ import opencl.all;
 
 import std.stdio;
 
-template clDbgInfo(T, string line = __LINE__, string file = __FILE__)
-{
-    enum clDbgInfo = "#line " ~ line ~ " \"" ~ file ~ "\" \n\n";
-}
-
 void main(string[] args)
 {
     try
@@ -20,8 +15,6 @@ void main(string[] args)
 	    writeln("No platforms available.");
 	    return;
 	}
-	
-	pragma(msg, clDbgInfo!(int));
 	
 	auto platform = platforms[0];
 	writefln("%s\n\t%s\n\t%s\n\t%s\n\t%s", platform.name, platform.vendor, platform.clversion, platform.profile, platform.extensions);

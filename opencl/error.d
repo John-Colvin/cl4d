@@ -78,30 +78,38 @@ class CLCommandQueueException : CLException {this(cl_errcode errcode, string msg
  */
 package string exceptionHandling(E...)(E es)
 {
-	version(NO_CL_EXCEPTIONS)
-		return "";
-	else version(BASIC_CL_EXCEPTIONS)
-		return `if (res != CL_SUCCESS) throw new CLException(res, "OpenCL API call failed!", __FILE__, __LINE__);`;
-	else
-	{
-	string res = `switch (res)
-{
-	case CL_SUCCESS:
-		break;
-`;
+    version(NO_CL_EXCEPTIONS)
+    {
+	return "";
+    }
+    else version(BASIC_CL_EXCEPTIONS)
+    {
+	return `if (res != CL_SUCCESS) throw new CLException(res, "OpenCL API call failed!", __FILE__, __LINE__);`;
+    }
+    else
+    {
+	string res = 
+            `switch (res)
+             {
+	         case CL_SUCCESS:
+		    break;
+            `;
 	
 	foreach(e; es)
 	{
-		res ~= `	case ` ~ e[0] ~ `:
-		throw new CL` ~ toCamelCase(e[0][2..$]) ~ `Exception("` ~ e[1] ~ `", __FILE__, __LINE__);
-`;
+	    res ~= 
+		`case ` ~ e[0] ~ `:
+		     throw new CL` ~ toCamelCase(e[0][2..$]) ~ `Exception("` ~ e[1] ~ `", __FILE__, __LINE__);
+                `;
 	}
 	
-	res ~= `	default:
-		throw new CLUnrecognizedException(res, __FILE__, __LINE__);
-}`;
+	res ~= 
+	    `	 default:
+		     throw new CLUnrecognizedException(res, __FILE__, __LINE__);
+             }
+             `;
 	return res;
-	}
+    }
 }
 
 // ======================================================

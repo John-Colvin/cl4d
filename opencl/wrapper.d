@@ -39,7 +39,6 @@ package
  */ 
 package template CLWrapper(T, alias classInfoFunction)
 {
-    pragma(msg, __traits(identifier, classInfoFunction));
     //make template symbols available inside string
     enum CLWrapper = "private alias T = " ~ T.stringof ~ ";\n" ~ 
 	"private alias classInfoFunction = " ~ __traits(identifier, classInfoFunction) ~ ";\n"
@@ -52,7 +51,7 @@ package template CLWrapper(T, alias classInfoFunction)
     //public alias _object this; // TODO any merit?
     package alias T CType; // remember the C type
     
-public:
+  public:
     //! wrap OpenCL C API object
     //! this doesn't change the reference count
     this(T obj)
@@ -88,7 +87,7 @@ public:
 	assert(_object !is null, "invariant violated: _object is null");
     }
     
-package:
+  package:
     // return the internal OpenCL C object
     // should only be used inside here so reference counting works
     final @property T cptr() const

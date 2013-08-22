@@ -22,6 +22,11 @@ import opencl.kernel;
 import opencl.memory;
 import opencl.wrapper;
 
+auto commandQueue(CLContext context, CLDevice device, bool outOfOrder = false, bool profiling = false)
+{
+    return CLCommandQueue(context, device, outOfOrder, profiling);
+}
+
 //!
 struct CLCommandQueue
 {

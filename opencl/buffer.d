@@ -28,7 +28,7 @@ struct CLBuffer
 
     this(cl_mem obj)
     {
-    sup = CLMemory(obj);
+	sup = CLMemory(obj);
     }
 
     /**
@@ -43,23 +43,23 @@ struct CLBuffer
      */
     this(CLContext context, cl_mem_flags flags, size_t datasize, void* hostptr = null)
     {
-    // call "base constructor"
-    cl_errcode res;
-    this(clCreateBuffer(context.cptr, flags, datasize, hostptr, &res));
+	// call "base constructor"
+	cl_errcode res;
+	this(clCreateBuffer(context.cptr, flags, datasize, hostptr, &res));
         
-    mixin
-    (
-        exceptionHandling(
-            ["CL_INVALID_CONTEXT",               ""],
-	    ["CL_INVALID_BUFFER_SIZE",           "hostbuf is empty"],
-	    ["CL_INVALID_HOST_PTR",              "hostbuf is null and CL_MEM_USE_HOST_PTR or CL_MEM_COPY_HOST_PTR are set "
-	                                        ~"in flags or hostbuf !is null but CL_MEM_COPY_HOST_PTR or CL_MEM_USE_HOST_PTR "
-		                                ~"are not set in flags"],
-	    ["CL_MEM_OBJECT_ALLOCATION_FAILURE", ""],
-	    ["CL_OUT_OF_RESOURCES",              ""],
-	    ["CL_OUT_OF_HOST_MEMORY",            ""]
-	)
-    );
+	mixin
+	(
+	    exceptionHandling(
+		["CL_INVALID_CONTEXT",               ""],
+		["CL_INVALID_BUFFER_SIZE",           "hostbuf is empty"],
+		["CL_INVALID_HOST_PTR",              "hostbuf is null and CL_MEM_USE_HOST_PTR or CL_MEM_COPY_HOST_PTR are set "
+		                                    ~"in flags or hostbuf !is null but CL_MEM_COPY_HOST_PTR or CL_MEM_USE_HOST_PTR "
+		                                    ~"are not set in flags"],
+		["CL_MEM_OBJECT_ALLOCATION_FAILURE", ""],
+		["CL_OUT_OF_RESOURCES",              ""],
+		["CL_OUT_OF_HOST_MEMORY",            ""]
+	    )
+	);
     }
     
     version(CL_VERSION_1_1)

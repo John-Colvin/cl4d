@@ -75,7 +75,6 @@ public:
 			["CL_INVALID_CONTEXT",		""],
 			["CL_INVALID_VALUE",		"devices or kernelNames is invalid"],
 			["CL_INVALID_DEVICE",		"some devices in list are not associated with context"],
-			["CL_INVALID_DEVICE",		""],
 			["CL_OUT_OF_HOST_MEMORY",	""]
 		));
 	}

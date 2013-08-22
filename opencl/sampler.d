@@ -27,52 +27,52 @@ struct CLSampler
     mixin(CLWrapper!(cl_sampler, clGetSamplerInfo));
 
 public:
-	/**
-	 *	creates a sampler object
-	 *
-	 *	Params:
-	 *		normalizedCoords= determines if the image coordinates specified are normalized
-	 *		addressingMode	= specifies how out-of-range image coordinates are handled when reading from an image
-	 *		filterMode		= specifies the type of filter that must be applied when reading an image
-	 */
-	this(CLContext context, cl_bool normalizedCoords, cl_addressing_mode addressingMode, cl_filter_mode filterMode)
-	{
-		cl_errcode res;
-		this(clCreateSampler(context.cptr, normalizedCoords, addressingMode, filterMode, &res));
+    /**
+     *	creates a sampler object
+     *
+     *	Params:
+     *		normalizedCoords= determines if the image coordinates specified are normalized
+     *		addressingMode	= specifies how out-of-range image coordinates are handled when reading from an image
+     *		filterMode		= specifies the type of filter that must be applied when reading an image
+     */
+    this(CLContext context, cl_bool normalizedCoords, cl_addressing_mode addressingMode, cl_filter_mode filterMode)
+    {
+	cl_errcode res;
+	this(clCreateSampler(context.cptr, normalizedCoords, addressingMode, filterMode, &res));
 		
-		mixin(exceptionHandling(
-			["CL_INVALID_CONTEXT",		""],
-			["CL_INVALID_VALUE",		"addressingMode, filterMode, normalizedCoords or combination of these argument values are not valid"],
-			["CL_INVALID_OPERATION",	"images are not supported by any device associated with context"],
-			["CL_OUT_OF_RESOURCES",		""],
-			["CL_OUT_OF_HOST_MEMORY",	""]
-		));
+	mixin(exceptionHandling(
+		  ["CL_INVALID_CONTEXT",	""],
+		  ["CL_INVALID_VALUE",		"addressingMode, filterMode, normalizedCoords or combination of these argument values are not valid"],
+		  ["CL_INVALID_OPERATION",	"images are not supported by any device associated with context"],
+		  ["CL_OUT_OF_RESOURCES",	""],
+		  ["CL_OUT_OF_HOST_MEMORY",	""]
+		  ));
+    }
+
+    @property
+    {
+	//! the context specified when the sampler was created
+	CLContext context()
+	{
+	    return CLContext(getInfo!cl_context(CL_SAMPLER_CONTEXT));
 	}
 
-	@property
+	//!
+	cl_bool normalizedCoords()
 	{
-		//! the context specified when the sampler was created
-		CLContext context()
-		{
-			return CLContext(getInfo!cl_context(CL_SAMPLER_CONTEXT));
-		}
+	    return getInfo!cl_bool(CL_SAMPLER_NORMALIZED_COORDS);
+	}
 
-		//!
-		cl_bool normalizedCoords()
-		{
-			return getInfo!cl_bool(CL_SAMPLER_NORMALIZED_COORDS);
-		}
+	//!
+	cl_addressing_mode addressingMode()
+	{
+	    return getInfo!cl_addressing_mode(CL_SAMPLER_ADDRESSING_MODE); 
+	}
 
-		//!
-		cl_addressing_mode addressingMode()
-		{
-			return getInfo!cl_addressing_mode(CL_SAMPLER_ADDRESSING_MODE); 
-		}
-
-		//!
-		cl_filter_mode filterMode()
-		{
-			return getInfo!cl_filter_mode(CL_SAMPLER_FILTER_MODE); 
-		}
-	} // of @property
+	//!
+	cl_filter_mode filterMode()
+	{
+	    return getInfo!cl_filter_mode(CL_SAMPLER_FILTER_MODE); 
+	}
+    } // of @property
 }

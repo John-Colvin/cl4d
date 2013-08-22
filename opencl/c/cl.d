@@ -13,6 +13,8 @@ module opencl.c.cl;
 
 public import opencl.c.cl_platform;
 
+import std.typecons : Proxy;
+
 version(CL_VERSION_1_2)
 {
     version = CL_VERSION_1_1;
@@ -30,7 +32,7 @@ package string bringToCurrentScope(alias EnumType)()
 }
 
 extern(System):
-
+/+
 //! these MUST be typedefs
 typedef const(void*)
 cl_platform_id,
@@ -42,6 +44,51 @@ cl_program,
 cl_kernel,
 cl_event,
 cl_sampler;
++/
+
+mixin template CLTypedef(T, string name)
+{
+    mixin("alias " ~ name ~ " = Typedef!(T, T.init, \"" ~ name ~ "\");"); 
+}
+
+    alias cvp = const(void*);
+
+mixin CLTypedef!(cvp, "cl_platform_id");
+mixin CLTypedef!(cvp, "cl_device_id");
+mixin CLTypedef!(cvp, "cl_context");
+mixin CLTypedef!(cvp, "cl_command_queue");
+mixin CLTypedef!(cvp, "cl_mem");
+mixin CLTypedef!(cvp, "cl_program");
+mixin CLTypedef!(cvp, "cl_kernel");
+mixin CLTypedef!(cvp, "cl_event");
+mixin CLTypedef!(cvp, "cl_sampler");
+
+struct Typedef(T, T init = T.init, string cookie=null)
+{
+    static if(init != T.init)
+    {
+        private T Typedef_payload = init;
+    }
+    else
+    {
+        private T Typedef_payload;
+    }
+
+    mixin Proxy!Typedef_payload;
+}
+
+/+
+//These kill wrapper.d which depends on type names
+alias cl_platform_id = cvp;
+alias cl_device_id = cvp;
+alias cl_context = cvp;
+alias cl_command_queue = cvp;
+alias cl_mem = cvp;
+alias cl_program = cvp;
+alias cl_kernel = cvp;
+alias cl_event = cvp;
+alias cl_sampler = cvp;
++/
 
 // TODO: info types should be aliases so getInfo isn't instantiated too often for the same types?
 // on the other hand typedefs are needed to be type-safe, esp. for bitfields
@@ -887,11 +934,13 @@ alias extern(System) void function(
     void* user_data) mem_notify_fn;
 
 version(CL_VERSION_1_1)
-//!
-cl_errcode clSetMemObjectDestructorCallback(
-    cl_mem  memobj,
-    mem_notify_fn pfn_notify,
-    void*   user_data);
+{
+    cl_errcode clSetMemObjectDestructorCallback(
+	cl_mem  memobj,
+	mem_notify_fn pfn_notify,
+	void*   user_data
+	);
+}
 
 // Sampler APIs
 //!

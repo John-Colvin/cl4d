@@ -40,14 +40,14 @@ package
 package template CLWrapper(T, alias classInfoFunction)
 {
     //make template symbols available inside string
-    enum CLWrapper = "private alias T = " ~ T.stringof ~ ";\n" ~ 
+    enum CLWrapper = "private alias T = " ~ T.stringof ~ ";\n" ~
 	"private alias classInfoFunction = " ~ __traits(identifier, classInfoFunction) ~ ";\n"
 	q{
 
 //Everything in this template from here is in a string. It will be evaluated in the
 //scope of wherever it is mixed in.
 
-    package T _object = null;
+    package T _object;
     //public alias _object this; // TODO any merit?
     package alias T CType; // remember the C type
     

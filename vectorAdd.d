@@ -3,12 +3,8 @@ module vectorAdd;
 import opencl.all;
 
 import std.stdio;
-
-static this()
-{
-
-
-}
+import std.exception;
+import std.datetime;
 
 void main(string[] args)
 {
@@ -59,7 +55,7 @@ void main(string[] args)
     writeln("kernel created");
 	
     // create input vectors
-    immutable VECTOR_SIZE = 100;
+    immutable VECTOR_SIZE = 10000;
     int[VECTOR_SIZE] va = void; foreach(int i, ref e; va) e = i;
     int[VECTOR_SIZE] vb = void; foreach(int i, ref e; vb) e = cast(int) vb.length - i;
     int[VECTOR_SIZE] vc;
@@ -82,17 +78,20 @@ void main(string[] args)
     // Run the kernel on specific ND range
     auto global	= NDRange(VECTOR_SIZE);
     //auto local	= NDRange(1);
+    auto sw = StopWatch();
+    sw.start();
     CLEvent execEvent = queue.enqueueNDRangeKernel(kernel, global);
-    queue.flush();
+//    queue.flush();
     // wait for the kernel to be executed
     execEvent.wait();
-	
+    sw.stop();
+    writeln(sw.peek().usecs);
     // Read buffer vc into a local list
     // TODO: figure out why this call is needed even though CL_MEM_USE_HOST_PTR is used
-    queue.enqueueReadBuffer(bufferC, CL_TRUE, 0, vc.sizeof, vc.ptr);
+//    queue.enqueueReadBuffer(bufferC, CL_TRUE, 0, vc.sizeof, vc.ptr);
 	
     foreach(i,e; vc)
     {
-	writef("%d + %d = %d\n", va[i], vb[i], vc[i]);
+	enforce(e == VECTOR_SIZE);
     }
 }

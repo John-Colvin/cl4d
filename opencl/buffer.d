@@ -17,6 +17,8 @@ import opencl.error;
 import opencl.memory;
 import opencl.wrapper;
 
+import std.stdio;
+
 /**
  *  buffer objects are generic memory objects for containing any type of data
  */
@@ -27,8 +29,15 @@ struct CLBuffer
     alias sup this;
 
     this(cl_mem obj)
+    in
     {
+	assert(obj !is null);
+    }
+    body
+    {
+	writeln("before");
 	sup = CLMemory(obj);
+	writeln("after");
     }
 
     /**
@@ -43,10 +52,11 @@ struct CLBuffer
      */
     this(CLContext context, cl_mem_flags flags, size_t datasize, void* hostptr = null)
     {
+	writeln("entering buffer constructor");
 	// call "base constructor"
 	cl_errcode res;
 	this(clCreateBuffer(context.cptr, flags, datasize, hostptr, &res));
-        
+
 	mixin
 	(
 	    exceptionHandling(
@@ -60,6 +70,7 @@ struct CLBuffer
 		["CL_OUT_OF_HOST_MEMORY",            ""]
 	    )
 	);
+	writeln("leaving buffer constructor");
     }
     
     version(CL_VERSION_1_1)

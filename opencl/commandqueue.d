@@ -30,7 +30,7 @@ auto commandQueue(CLContext context, CLDevice device, bool outOfOrder = false, b
 //!
 struct CLCommandQueue
 {
-    mixin(CLWrapper!(cl_command_queue, clGetCommandQueueInfo));
+    mixin(CLWrapper!(cl_command_queue, "cl_command_queue", clGetCommandQueueInfo));
 
 public:
     /**

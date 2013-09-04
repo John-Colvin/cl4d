@@ -46,13 +46,15 @@ cl_event,
 cl_sampler;
 +/
 
+
+/+
 mixin template CLTypedef(T, string name)
 {
     mixin("alias " ~ name ~ " = Typedef!(T, T.init, \"" ~ name ~ "\");"); 
 }
-
++/
     alias cvp = const(void*);
-
+/+
 mixin CLTypedef!(cvp, "cl_platform_id");
 mixin CLTypedef!(cvp, "cl_device_id");
 mixin CLTypedef!(cvp, "cl_context");
@@ -63,8 +65,82 @@ mixin CLTypedef!(cvp, "cl_kernel");
 mixin CLTypedef!(cvp, "cl_event");
 mixin CLTypedef!(cvp, "cl_sampler");
 
+unittest
+{
+    struct A
+    {
+	cl_platform_id _blah = cl_platform_id.init;
+	this(cl_platform_id init)
+	in
+	{
+	    assert(_blah is cl_platform_id.init);
+	}
+	out
+	{
+	    assert(_blah is init);
+	}
+	body
+	{
+	    blt(_blah, init);
+	}
+    }
+
+    A a;
+
+    static assert(!is(cl_platform_id == const(void*)));
+    static assert(!is(cl_platform_id == cl_context));
+}
++/
+/+
+enum vpNull = cast(void*)null;
+
+void blt(T)(ref T a, T b)
+out
+{
+    a == b;
+}
+body
+{
+    auto aptr = (cast(void*)&a)[0 .. T.sizeof];
+    aptr[] = (cast(void*)&b)[0 .. T.sizeof];
+}
++/
+/+
+mixin template TDef(string name, T, T init = T.init)
+{
+    mixin("alias TDef = " ~ name ~ ";");
+    mixin
+    (
+	"struct " ~ name ~ q{
+	{
+	    static if(init != T.init)
+	    {
+		private T Typedef_payload = init;
+	    }
+	    else
+	    {
+		private T Typedef_payload;
+	    }
+	    
+	    this(T initial)
+	    {
+		Typedef_payload = initial;
+	    }
+	    
+	    this(typeof(this) initial)
+	    {
+		Typedef_payload = initial.Typedef_payload;
+	    }
+	    
+	    mixin Proxy!(Typedef_payload);
+     	}
+	
+    );
+}
+
 struct Typedef(T, T init = T.init, string cookie=null)
 {
+    enum __cookie__ = cookie;
     static if(init != T.init)
     {
         private T Typedef_payload = init;
@@ -74,10 +150,21 @@ struct Typedef(T, T init = T.init, string cookie=null)
         private T Typedef_payload;
     }
 
-    mixin Proxy!Typedef_payload;
-}
+    this(T initial)
+    {
+	Typedef_payload = initial;
+    }
 
-/+
+    this(typeof(this) initial)
+    {
+	Typedef_payload = initial.Typedef_payload;
+    }
+    
+    mixin Proxy!(Typedef_payload);
+}
++/
+
+
 //These kill wrapper.d which depends on type names
 alias cl_platform_id = cvp;
 alias cl_device_id = cvp;
@@ -88,7 +175,7 @@ alias cl_program = cvp;
 alias cl_kernel = cvp;
 alias cl_event = cvp;
 alias cl_sampler = cvp;
-+/
+
 
 // TODO: info types should be aliases so getInfo isn't instantiated too often for the same types?
 // on the other hand typedefs are needed to be type-safe, esp. for bitfields

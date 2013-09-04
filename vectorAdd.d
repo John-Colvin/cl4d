@@ -18,8 +18,9 @@ void main(string[] args)
 	writeln("No platforms available.");
 	return;
     }
-	
+
     auto platform = platforms[0];
+
     writefln("%s\n\t%s\n\t%s\n\t%s\n\t%s", platform.name, platform.vendor, platform.clversion, 
 	     platform.profile, platform.extensions);
 	
@@ -29,6 +30,7 @@ void main(string[] args)
 	writeln("No devices available.");
 	return;
     }
+	
 	
     foreach(CLDevice device; devices)
     {
@@ -51,25 +53,31 @@ void main(string[] args)
     program.build("-w -Werror");
     writeln(program.buildLog(devices[0]));
 	
+    writeln("program built");
+
     auto kernel = CLKernel(program, "sum");
+    writeln("kernel created");
 	
     // create input vectors
     immutable VECTOR_SIZE = 100;
-    int[VECTOR_SIZE] va = void; foreach(int i,e; va) va[i] = i;
-    int[VECTOR_SIZE] vb = void; foreach(int i,e; vb) vb[i] = cast(int) vb.length - i;
+    int[VECTOR_SIZE] va = void; foreach(int i, ref e; va) e = i;
+    int[VECTOR_SIZE] vb = void; foreach(int i, ref e; vb) e = cast(int) vb.length - i;
     int[VECTOR_SIZE] vc;
 	
     // Create CL buffers
     auto bufferA = CLBuffer(context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, va.sizeof, va.ptr);
+    writeln("created bufferA");
     auto bufferB = CLBuffer(context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, vb.sizeof, vb.ptr);
     auto bufferC = CLBuffer(context, CL_MEM_WRITE_ONLY | CL_MEM_USE_HOST_PTR, vc.sizeof, vc.ptr);
-	
+    writeln("created buffers");
+
     // Copy lists A and B to the memory buffers
     //	queue.enqueueWriteBuffer(bufferA, CL_TRUE, 0, va.sizeof, va.ptr);
     //	queue.enqueueWriteBuffer(bufferB, CL_TRUE, 0, vb.sizeof, vb.ptr);
 	
     // Set arguments to kernel
     kernel.setArgs(bufferA, bufferB, bufferC);
+    writeln("arguments set");
 	
     // Run the kernel on specific ND range
     auto global	= NDRange(VECTOR_SIZE);

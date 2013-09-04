@@ -19,6 +19,7 @@ import opencl.device;
 import opencl.event;
 
 import std.array;
+import std.conv : to;
 
 package
 {
@@ -37,11 +38,12 @@ package
  *
  *	It should be a template mixin, but unfortunately those can't add constructors to classes
  */ 
-package template CLWrapper(T, alias classInfoFunction)
+package template CLWrapper(T, string TName, alias classInfoFunction)
 {
     //make template symbols available inside string
     enum CLWrapper = "private alias T = " ~ T.stringof ~ ";\n" ~
-	"private alias classInfoFunction = " ~ __traits(identifier, classInfoFunction) ~ ";\n"
+	"private alias classInfoFunction = " ~ __traits(identifier, classInfoFunction) ~ ";\n" ~
+	"private enum TStr = \"" ~ TName ~ "\";\n" ~
 	q{
 
 //Everything in this template from here is in a string. It will be evaluated in the
@@ -55,19 +57,35 @@ package template CLWrapper(T, alias classInfoFunction)
     //! wrap OpenCL C API object
     //! this doesn't change the reference count
     this(T obj)
+    in
+    {
+	assert(obj !is null);
+	assert(_object == T.init);
+    }
+    out
+    {
+	assert(_object == obj);
+    }
+    body
     {
 	_object = obj;
-	debug writef("wrapped %s %X\n", T.stringof, cast(void*) _object);
+	debug writef("wrapped %s %X\n", TStr, cast(void*) _object);
     }
     
     debug private import std.stdio;
     
     //! copy and increase reference count
     this(this)
+    in
+    {
+	assert(_object !is null);
+    }
+    body
     {
 	// increment reference count
+	debug writeln("\n", typeid(typeof(this)), " postblit, about to retain\n");
 	retain();
-	debug writef("copied %s %X. Reference count is now: %d\n", T.stringof, cast(void*) _object, referenceCount);
+	debug writef("copied %s %X. Reference count is now: %d\n", TStr, cast(void*) _object, referenceCount);
     }
     
     //! release the object
@@ -77,15 +95,17 @@ package template CLWrapper(T, alias classInfoFunction)
 	{
 	    return;
 	}
-	debug writef("releasing %s %X. Reference count before: %d\n", T.stringof, cast(void*) _object, referenceCount);
+	debug writef("releasing %s %X. Reference count before: %d\n", TStr, cast(void*) _object, referenceCount);
 	release();
     }
-    
+
+    /+    BREAKS, DON'T KNOW WHY!!!
     //! ensure that _object isn't null
     invariant()
     {
 	assert(_object !is null, "invariant violated: _object is null");
     }
+    +/
     
   package:
     // return the internal OpenCL C object
@@ -101,7 +121,7 @@ package template CLWrapper(T, alias classInfoFunction)
 	// HACK: really need a proper system for OpenCL version handling
 	version(CL_VERSION_1_2)
 	{
-	    static if (T.stringof == "cl_device_id")
+	    static if (TStr == "cl_device_id")
 	    {
 		clRetainDevice(_object);
 	    }
@@ -109,9 +129,9 @@ package template CLWrapper(T, alias classInfoFunction)
 	// NOTE: cl_platform_id and cl_device_id aren't reference counted
 	// T.stringof is compared instead of T itself so it also works with T being an alias
 	// platform and device will have an empty retain() so it can be safely used in this()
-	static if (T.stringof[$-3..$] != "_id")
+	static if (TStr[$-3..$] != "_id")
 	{
-	    mixin("cl_errcode res = clRetain" ~ toCamelCase(T.stringof[2..$]) ~ (T.stringof == "cl_mem" ? "Object" : "") ~ "(_object);");
+	    mixin("cl_errcode res = clRetain" ~ toCamelCase(TStr[2..$]) ~ (TStr == "cl_mem" ? "Object" : "") ~ "(_object);");
 	    mixin(exceptionHandling(["CL_OUT_OF_RESOURCES", ""], ["CL_OUT_OF_HOST_MEMORY", ""]));
 	}
     }
@@ -125,15 +145,15 @@ package template CLWrapper(T, alias classInfoFunction)
 	// HACK: really need a proper system for OpenCL version handling
 	version(CL_VERSION_1_2)
 	{
-	    static if (T.stringof == "cl_device_id")
+	    static if (TStr == "cl_device_id")
 	    {
 		clReleaseDevice(_object);
 	    }
 	}
 
-	static if (T.stringof[$-3..$] != "_id")
+	static if (TStr[$-3..$] != "_id")
 	{
-	    mixin("cl_errcode res = clRelease" ~ toCamelCase(T.stringof[2..$]) ~ (T.stringof == "cl_mem" ? "Object" : "") ~ "(_object);");
+	    mixin("cl_errcode res = clRelease" ~ toCamelCase(TStr[2..$]) ~ (TStr == "cl_mem" ? "Object" : "") ~ "(_object);");
 	    mixin(exceptionHandling(["CL_OUT_OF_RESOURCES", ""], ["CL_OUT_OF_HOST_MEMORY", ""]));
 	}
     }
@@ -146,9 +166,9 @@ package template CLWrapper(T, alias classInfoFunction)
      */
     public @property cl_uint referenceCount() const
     {
-	static if (T.stringof[$-3..$] != "_id")
+	static if (TStr[$-3..$] != "_id")
 	{
-	    mixin("return getInfo!cl_uint(CL_" ~ (T.stringof == "cl_command_queue" ? "QUEUE" : T.stringof[3..$].toUpper) ~ "_REFERENCE_COUNT);");
+	    mixin("return getInfo!cl_uint(CL_" ~ (TStr == "cl_command_queue" ? "QUEUE" : TStr[3..$].toUpper) ~ "_REFERENCE_COUNT);");
 	}
 	else
 	{
@@ -197,7 +217,7 @@ protected:
 	U info;
 	
 	// get actual data
-	res = infoFunction(_object, infoname, U.sizeof, &info, null);
+	res = infoFunction(_object, infoname, U.sizeof, cast(void*)&info, null);
 	
 	// error checking
 	if (res != CL_SUCCESS)
@@ -265,10 +285,10 @@ protected:
 	assert(_object !is null);
 	size_t needed;
 	cl_errcode res;
-	
+
 	// get amount of needed memory
 	res = infoFunction(_object, infoname, 0, null, &needed);
-	
+
 	// error checking
 	if (res != CL_SUCCESS)
 	{
@@ -306,10 +326,10 @@ protected:
 	assert(_object !is null);
 	size_t needed;
 	cl_errcode res;
-	
+
 	// get amount of needed memory
 	res = altFunction(_object, device, infoname, 0, null, &needed);
-	
+
 	// error checking
 	if (res != CL_SUCCESS)
 	{

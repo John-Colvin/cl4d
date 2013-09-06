@@ -46,7 +46,7 @@ void main(string[] args)
 		c[i] = a[i] + b[i];
 	    }
 	});
-    program.build("-w -Werror");
+    program.build("-O3 -w -Werror");
     writeln(program.buildLog(devices[0]));
 	
     writeln("program built");
@@ -55,10 +55,10 @@ void main(string[] args)
     writeln("kernel created");
 	
     // create input vectors
-    immutable VECTOR_SIZE = 10000;
-    int[VECTOR_SIZE] va = void; foreach(int i, ref e; va) e = i;
-    int[VECTOR_SIZE] vb = void; foreach(int i, ref e; vb) e = cast(int) vb.length - i;
-    int[VECTOR_SIZE] vc;
+    enum VECTOR_SIZE = 10000000;
+    int[] va = new int[VECTOR_SIZE]; foreach(int i, ref e; va) e = i;
+    int[] vb = new int[VECTOR_SIZE]; foreach(int i, ref e; vb) e = cast(int) vb.length - i;
+    int[] vc = new int[VECTOR_SIZE];
 	
     // Create CL buffers
     auto bufferA = CLBuffer(context, CL_MEM_READ_ONLY | CL_MEM_USE_HOST_PTR, va.sizeof, va.ptr);

@@ -24,7 +24,7 @@ import cl4d.wrapper;
  */
 struct CLSampler
 {
-    mixin(CLWrapper("cl_sampler", "clGetSamplerInfo"));
+    mixin(CLWrapper!("cl_sampler", "clGetSamplerInfo"));
 
 public:
     /**

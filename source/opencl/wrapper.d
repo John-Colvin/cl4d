@@ -151,7 +151,7 @@ public template CLWrapper(string T, string classInfoFunction)
     {
         static if (Tname[$-3..$] != "_id")
         {
-            mixin("return getInfo!cl_uint(CL_" ~ (TStr == "cl_command_queue" ? "QUEUE" : TStr[3..$].toUpper()) ~ "_REFERENCE_COUNT);");
+            mixin("return getInfo!cl_uint(CL_" ~ (Tname == "cl_command_queue" ? "QUEUE" : Tname[3..$].toUpper()) ~ "_REFERENCE_COUNT);");
         }
         else
 	{

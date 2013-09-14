@@ -25,7 +25,7 @@ import cl4d.error;
  */
 struct CLProgram
 {
-    mixin(CLWrapper("cl_program", "clGetProgramInfo"));
+    mixin(CLWrapper!("cl_program", "clGetProgramInfo"));
 
 public:
     /**

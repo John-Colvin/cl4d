@@ -27,7 +27,7 @@ alias int cl_errcode;
 //!
 struct CLCommandQueue
 {
-    mixin(CLWrapper("cl_command_queue", "clGetCommandQueueInfo"));
+    mixin(CLWrapper!("cl_command_queue", "clGetCommandQueueInfo"));
 
 public:
     /**

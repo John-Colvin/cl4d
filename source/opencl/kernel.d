@@ -79,7 +79,7 @@ alias CLObjectCollection!CLKernel CLKernels;
  */
 struct CLKernel
 {
-    mixin(CLWrapper("cl_kernel", "clGetKernelInfo"));
+    mixin(CLWrapper!("cl_kernel", "clGetKernelInfo"));
 
 public:
     /**

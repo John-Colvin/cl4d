@@ -6,6 +6,11 @@ import std.stdio;
 import std.exception;
 import std.datetime;
 
+static this()
+{
+    DerelictCL.load();
+}
+
 void main(string[] args)
 {
     auto platforms = CLHost.getPlatforms();
@@ -85,7 +90,7 @@ void main(string[] args)
     // wait for the kernel to be executed
     execEvent.wait();
     sw.stop();
-    writeln(sw.peek().usecs);
+    writeln("\n\n",sw.peek().usecs,"\n\n");
     // Read buffer vc into a local list
     // TODO: figure out why this call is needed even though CL_MEM_USE_HOST_PTR is used
 //    queue.enqueueReadBuffer(bufferC, CL_TRUE, 0, vc.sizeof, vc.ptr);

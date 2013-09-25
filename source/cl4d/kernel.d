@@ -140,7 +140,7 @@ public:
             auto tmp = arg.cptr;
             setArgx(idx, arg.cptr.sizeof, &tmp);
         }
-        else static if (is(ArgType : CLObject))
+        else static if (is(ArgType : Object))  //NOTE: must ask about CLObject typo
 	{
             static assert(0, "can't set " ~ ArgType.stringof ~ " as a kernel argument!");
 	}        

@@ -274,7 +274,7 @@ public:
     body
     {
         cl_event event;
-        cl_errcode res = func (this._object, buffer.cptr, blocking, offset, size, ptr,  cast(cl_uint) waitlist.length, waitlist.ptr, &event);
+        cl_errcode res = func (this._object, buffer.cptr, blocking, offset, size, ptr, cast(cl_uint) waitlist.length, waitlist.ptr, &event);
         
         mixin(exceptionHandling(
 		  ["CL_INVALID_COMMAND_QUEUE",                        ""],

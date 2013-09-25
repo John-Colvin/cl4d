@@ -20,10 +20,10 @@ import cl4d.wrapper;
 // Used in this module as convenience shortcut
 enum cl_command_execution_status
 {
-    CL_COMPLETE = CL_COMPLETE,
-    CL_RUNNING = CL_RUNNING,
-    CL_SUBMITTED = CL_SUBMITTED,
-    CL_QUEUED = CL_QUEUED,
+    CL_COMPLETE = derelict.opencl.constants.CL_COMPLETE,
+    CL_RUNNING = derelict.opencl.constants.CL_RUNNING,
+    CL_SUBMITTED = derelict.opencl.constants.CL_SUBMITTED,
+    CL_QUEUED = derelict.opencl.constants.CL_QUEUED,
 }
 
 //! Event collection

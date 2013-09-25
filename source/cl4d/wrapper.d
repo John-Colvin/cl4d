@@ -380,6 +380,8 @@ package struct CLObjectCollection(T)
     body
     {
         // we safely reinterpret cast here since T just wraps a T.CType
+	static assert(T.sizeof == T.CType.sizeof);
+
         _objects = cast(T[]) objects;
     }
 

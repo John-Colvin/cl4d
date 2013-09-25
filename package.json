@@ -1,0 +1,19 @@
+{
+    "name": "cl4d",
+    "description": "A user-friendly D wrapper around OpenCL.",
+    "homepage": "https://github.com/John-Colvin/cl4d",
+    "license": "Boost",
+    "authors": [
+        "Trass3r",
+        "vuaru",
+        "John Colvin"
+    ],
+
+    "targetName": "cl4d",
+    "targetPath": "lib",
+
+    "dependencies": {
+        "derelict_extras-opencl": "~master",
+	"derelict-gl3": "~master"
+    },
+}

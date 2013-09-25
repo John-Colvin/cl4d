@@ -8,6 +8,9 @@ import std.random;
 static this()
 {
     DerelictCL.load();
+    writeln(DerelictCL.loadedVersion);
+    DerelictCL.reload(CLVersion.CL11);
+    writeln(DerelictCL.loadedVersion);
 }
 
 // This function takes a positive integer and rounds it up to
@@ -21,7 +24,7 @@ if(isUnsigned!T)
     // Add the difference to make the value a multiple
     if(remainder != 0)
     {
-	value += (multiple-remainder);
+	    value += (multiple-remainder);
     }
     
     return value;
@@ -32,10 +35,10 @@ float[] testImage(in size_t imageHeight, in size_t imageWidth)
     auto im = new float[imageHeight * imageWidth];
     foreach(i; 0 .. imageHeight)
     {
-	foreach(j; 0 .. imageWidth)
-	{
-	    im[i*imageWidth + j] = sin(i * j / 10.0)/* + uniform(0.0,0.2)*/;
-	}
+	    foreach(j; 0 .. imageWidth)
+	    {
+	        im[i*imageWidth + j] = sin(i * j / 10.0)/* + uniform(0.0,0.2)*/;
+	    }
     }
     return im;
 }
@@ -72,7 +75,7 @@ void main()
     auto platform = platforms[0];
 
     debug writefln("%s\n\t%s\n\t%s\n\t%s\n\t%s\n", platform.name, platform.vendor, platform.clversion, 
-	     platform.profile, platform.extensions);
+                   platform.profile, platform.extensions);
     
     auto devices = platform.allDevices;
     enforce(devices.length > 0);
@@ -80,13 +83,13 @@ void main()
     debug foreach(CLDevice device; devices)
     {
 	writefln("%s\n\t%s\n\t%s\n\t%s\n\t%s\n", device.name, device.vendor, device.driverVersion,
-		 device.clVersion, device.profile, device.extensions);
+		     device.clVersion, device.profile, device.extensions);
     }
     	
     auto context = CLContext(devices);
 
     auto queue = CLCommandQueue(context, devices[0]);
-    debug writeln("created queue");
+    debug writeln("\ncreated queue\n");
 
     // The image format describes how the data will be stored in memory
     cl_image_format format;
@@ -95,20 +98,20 @@ void main()
     
     // Create space for the source image on the device
     auto d_inputImage = CLImage(context, 0, format,
-				cl_image_desc(CL_MEM_OBJECT_IMAGE2D, imageWidth, imageHeight), 
-				null);
-    debug writeln("created input image buffer");
+                                cl_image_desc(CL_MEM_OBJECT_IMAGE2D, imageWidth, imageHeight), 
+                                null);
+    debug writeln("\ncreated input image buffer\n");
 
     // Create space for the output image on the device
     auto d_outputImage = CLImage(context, 0, format,
 				cl_image_desc(CL_MEM_OBJECT_IMAGE2D, imageWidth, imageHeight), 
 				null);
-    debug writeln("create output image buffer");
+    debug writeln("\ncreate output image buffer\n");
 
     // Create space for the 7x7 filter on the device
     auto d_filter = CLBuffer(context, 0, filterSize * float.sizeof, null);
 
-    debug writeln("allocated all buffers");
+    debug writeln("\nallocated all buffers\n");
 
     // Copy the source image to the device
     size_t[3] origin = [0, 0, 0];  // Offset within the image to copy from
@@ -124,12 +127,12 @@ void main()
 
 
     auto source = readText("convolution.cl");
-    debug writeln("read convolution.cl");
+    debug writeln("\nread convolution.cl\n");
     
     // Create a program object with source and build it
     auto program = context.createProgram(clDbgInfo!() ~ source);
     program.build("-O3 -w -Werror");
-    
+    debug writeln("\nbuilt program\n");
     
     // Create the kernel object
     auto kernel = CLKernel(program, "convolution");
@@ -157,10 +160,10 @@ void main()
     // Compute the reference image
     for(size_t i = 0; i < imageHeight; i++)
     {
-	for(size_t j = 0; j < imageWidth; j++)
-	{
-	    refImage[i*imageWidth+j] = 0;
-	}
+        for(size_t j = 0; j < imageWidth; j++)
+        {
+            refImage[i*imageWidth+j] = 0;
+        }
     }
     
     // Iterate over the rows of the source image
@@ -168,25 +171,25 @@ void main()
     float sum;
     for(size_t i = 0; i < imageHeight; i++)
     {
-	// Iterate over the columns of the source image
-	for(size_t j = 0; j < imageWidth; j++)
-	{
-	    sum = 0; // Reset sum for new source pixel
-	    // Apply the filter to the neighborhood
-	    for(int k = - halfFilterWidth; k <= halfFilterWidth; k++)
-	    {
-		for(int l = - halfFilterWidth; l <= halfFilterWidth; l++)
-		{
-		    if(i+k >= 0 && i+k < imageHeight && j+l >= 0 && j+l < imageWidth)
-		    {
-			sum += inputImage[(i+k)*imageWidth + j+l]
-			       * filter[(k+halfFilterWidth)*filterWidth 
-			       + l+halfFilterWidth];
-		    }
-		}
-	    }
-	    refImage[i*imageWidth+j] = sum;
-	}
+        // Iterate over the columns of the source image
+        for(size_t j = 0; j < imageWidth; j++)
+        {
+            sum = 0; // Reset sum for new source pixel
+            // Apply the filter to the neighborhood
+            for(int k = - halfFilterWidth; k <= halfFilterWidth; k++)
+            {
+                for(int l = - halfFilterWidth; l <= halfFilterWidth; l++)
+                {
+                    if(i+k >= 0 && i+k < imageHeight && j+l >= 0 && j+l < imageWidth)
+                    {
+                        sum += inputImage[(i+k)*imageWidth + j+l]
+                         * filter[(k+halfFilterWidth)*filterWidth 
+                         + l+halfFilterWidth];
+                    }
+                }
+            }
+            refImage[i*imageWidth+j] = sum;
+        }
     }
     
     int failed = 0;

@@ -1,0 +1,24 @@
+{
+    "name": "cl4d: vector addition example",
+    "description": "Examples for cl4d",
+    "homepage": "https://github.com/John-Colvin/cl4d",
+    "license": "Boost",
+    "authors": [
+        "Trass3r",
+        "vuaru",
+        "John Colvin"
+    ],
+
+    "targetName": "vectorAdd",
+    "targetType": "executable",
+
+    "sourcePaths": ["."],
+    "importPaths": ["../../source"],
+    "lflags": ["-L../../lib"],
+    "libs": ["cl4d"],
+
+    "dependencies": {
+        "derelict_extras-opencl": "~master",
+        "derelict-util": "~master"
+    },
+}

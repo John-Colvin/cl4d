@@ -14,7 +14,7 @@ static this()
 
 void main()
 {    
-    size_t imageHeight = 500, imageWidth = 500;
+    immutable size_t imageHeight = 500, imageWidth = 500;
     auto inputImage = testImage(imageHeight, imageWidth);
     
     // Size of the input and output images on the host
@@ -22,7 +22,6 @@ void main()
     
     // Output image on the host
     auto outputImage = new float[dataSize];
-    auto refImage = new float[dataSize];
     
     enum uint filterWidth = 3;
     enum uint filterSize  = filterWidth*filterWidth;  // Assume a square kernel
@@ -47,58 +46,50 @@ void main()
 	writefln("%s\n\t%s\n\t%s\n\t%s\n\t%s\n", device.name, device.vendor, device.driverVersion,
 		     device.clVersion, device.profile, device.extensions);
     }
-    	
+
     auto context = CLContext(devices);
 
     auto queue = CLCommandQueue(context, devices[0]);
-    debug writeln("\ncreated queue\n");
 
     // The image format describes how the data will be stored in memory
     cl_image_format format;
     format.image_channel_order     = CL_R;     // single channel
     format.image_channel_data_type = CL_FLOAT; // float data type
-    
+
     // Create space for the source image on the device
     auto d_inputImage = CLImage(context, 0, format,
                                 cl_image_desc(CL_MEM_OBJECT_IMAGE2D, imageWidth, imageHeight), 
                                 null);
-    debug writeln("\ncreated input image buffer\n");
 
     // Create space for the output image on the device
     auto d_outputImage = CLImage(context, 0, format,
 				cl_image_desc(CL_MEM_OBJECT_IMAGE2D, imageWidth, imageHeight), 
 				null);
-    debug writeln("\ncreate output image buffer\n");
 
-    // Create space for the 7x7 filter on the device
+    // Create space for the filter on the device
     auto d_filter = CLBuffer(context, 0, filterSize * float.sizeof, null);
-
-    debug writeln("\nallocated all buffers\n");
 
     // Copy the source image to the device
     size_t[3] origin = [0, 0, 0];  // Offset within the image to copy from
     size_t[3] region = [imageWidth, imageHeight, 1]; // Elements to per dimension
 
-    auto event = queue.enqueueWriteImage(d_inputImage, false, origin, region, cast(void*)inputImage.ptr);
-    event.wait();
+    auto event = queue.enqueueWriteImage(d_inputImage, true, origin, region, cast(void*)inputImage.ptr);
+
     // Copy the 7x7 filter to the device
-    event = queue.enqueueWriteBuffer(d_filter, false, 0, filterSize * float.sizeof, filter.ptr);
-    event.wait();
+    event = queue.enqueueWriteBuffer(d_filter, true, 0, filterSize * float.sizeof, filter.ptr);
+
     // Create the image sampler
     auto sampler = CLSampler(context, false, CL_ADDRESS_CLAMP_TO_EDGE, CL_FILTER_NEAREST);
 
 
     auto source = readText("convolution.cl");
-    debug writeln("\nread convolution.cl\n");
     
     // Create a program object with source and build it
     auto program = context.createProgram(clDbgInfo!() ~ source);
     program.build("-O3 -w -Werror");
-    debug writeln("\nbuilt program\n");
     
     // Create the kernel object
     auto kernel = CLKernel(program, "convolution");
-    debug writeln("\ncreated kernel\n");
     
     kernel.setArgs(d_inputImage,
 		   d_outputImage,
@@ -108,7 +99,6 @@ void main()
 		   to!int(filterWidth),
 		   sampler
 	);
-    debug writeln("\nset kernel args\n");
     
     // Set the work item dimensions
     auto global = NDRange(imageWidth, imageHeight);
@@ -120,32 +110,37 @@ void main()
     // Read the image back to the host
     queue.enqueueReadImage(d_outputImage, true, origin,
 			   region, cast(void*)outputImage.ptr);
-        
-    // Compute the reference image
-    for(size_t i = 0; i < imageHeight; i++)
-    {
-        for(size_t j = 0; j < imageWidth; j++)
-        {
-            refImage[i*imageWidth+j] = 0;
-        }
-    }
 
+
+    //check the result is correct
+    verify(inputImage, imageHeight, imageWidth, filter, filterWidth, outputImage);
+/+
+    printData(inputImage, imageHeight, imageWidth);
+    writeln();
+    printData(outputImage, imageHeight, imageWidth);
+    writeln();
+    printData(refImage, imageHeight, imageWidth);+/
+}
+
+void verify(float[] inputImage, size_t imageHeight, size_t imageWidth, float[] filter, size_t filterWidth, float[] outputImage)
+{
+    auto refImage = new float[inputImage.length];
+    
     // Iterate over the rows of the source image
-    int halfFilterWidth = (filterWidth-1)/2;
-    float sum;
-    for(size_t i = 0; i < imageHeight; i++)
+    long halfFilterWidth = (filterWidth-1)/2;
+    foreach(i; 0 .. imageHeight)
     {
         // Iterate over the columns of the source image
-        for(size_t j = 0; j < imageWidth; j++)
+        foreach(j; 0 .. imageWidth)
         {
-            sum = 0; // Reset sum for new source pixel
+            float sum = 0; // Reset sum for new source pixel
             // Apply the filter to the neighborhood
-            for(int k = - halfFilterWidth; k <= halfFilterWidth; k++)
+            foreach(k; -halfFilterWidth .. halfFilterWidth + 1)
             {
-                for(int l = - halfFilterWidth; l <= halfFilterWidth; l++)
+                foreach(l; -halfFilterWidth .. halfFilterWidth + 1)
                 {
-		    auto imVOff = (cast(int)(i + k)).clip(0, imageHeight - 1);
-		    auto imHOff = (cast(int)(j + l)).clip(0, imageWidth - 1);
+		    auto imVOff = (cast(long)(i + k)).clip(0, imageHeight - 1);
+		    auto imHOff = (cast(long)(j + l)).clip(0, imageWidth - 1);
 		    
 		    sum += inputImage[imVOff*imageWidth + imHOff]
                          * filter[(k+halfFilterWidth)*filterWidth + l + halfFilterWidth];
@@ -155,32 +150,21 @@ void main()
         }
     }
     
-    bool failed = false;
-    for(size_t i = 0; i < imageHeight; i++)
+    foreach(i; 0 .. imageHeight)
     {
-	for(size_t j = 0; j < imageWidth; j++)
+	foreach(j; 0 .. imageWidth)
 	{
-	    if(abs(outputImage[i*imageWidth+j]-refImage[i*imageWidth+j]) > 0.01)
+	    if(abs(outputImage[i*imageWidth+j] - refImage[i*imageWidth+j]) > 0.01)
 	    {
 		printf("Results are INCORRECT\n");
 		printf("Pixel mismatch at <%d,%d> (%f vs. %f)\n", i, j,
 		       outputImage[i*imageWidth+j], refImage[i*imageWidth+j]);
-		failed = true;
+		return;
 	    }
-	    if(failed) break;
 	}
-	if(failed) break;
     }
-    if(!failed)
-    {
-	printf("Results are correct\n");
-    }
-/+
-    printData(inputImage, imageHeight, imageWidth);
-    writeln();
-    printData(outputImage, imageHeight, imageWidth);
-    writeln();
-    printData(refImage, imageHeight, imageWidth);+/
+    
+    printf("Results are correct\n");
 }
 
 void printData(float[] data, size_t height, size_t width)

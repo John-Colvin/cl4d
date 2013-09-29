@@ -15,6 +15,8 @@ import cl4d.device;
 import cl4d.error;
 import cl4d.wrapper;
 
+import std.algorithm, std.conv;
+
 //! Platform collection
 alias CLObjectCollection!CLPlatform CLPlatforms;
 
@@ -25,21 +27,44 @@ struct CLPlatform
 
 public:
     /// get the platform name
-    string name()
+    @property string name()
     {
 	return getStringInfo(CL_PLATFORM_NAME);
     }
     
     /// get platform vendor
-    string vendor()
+    @property string vendor()
     {
 	return getStringInfo(CL_PLATFORM_VENDOR);
     }
 
     /// get platform version
-    string clversion()
+    @property string clVersion()
     {
 	return getStringInfo(CL_PLATFORM_VERSION);
+    }
+
+    @property CLVersion clVersionId()
+    {
+	auto id = this.clVersion();
+	id.findSkip(" ");
+	auto ver = id.findSplit(" ")[0];
+        auto tmp = ver.findSplit(".");
+	auto major = tmp[0].to!ubyte();
+	auto minor = tmp[2].to!ubyte();
+	
+	assert(major == 1);
+	switch(minor)
+	{
+	    case 0:
+		return CLVersion.CL10;
+	    case 1:
+		return CLVersion.CL11;
+	    case 2:
+		return CLVersion.CL12;
+	    default:
+		assert(false);
+	}
     }
 
     /// get platform profile

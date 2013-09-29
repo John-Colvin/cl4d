@@ -1,52 +1,20 @@
 import std.stdio;
 import cl4d.all;
+
 import std.exception : enforce;
 import std.file : readText;
-import std.math;
-import std.random;
+import std.conv : to;
+import std.math : sin, abs;
+import std.random : uniform;
 
 static this()
 {
     DerelictCL.load();
-    writeln(DerelictCL.loadedVersion);
-    DerelictCL.reload(CLVersion.CL11);
-    writeln(DerelictCL.loadedVersion);
-}
-
-// This function takes a positive integer and rounds it up to
-// the nearest multiple of another provided integer
-auto roundUp(T)(T value, T multiple)
-if(isUnsigned!T)
-{
-    // Determine how far past the nearest multiple the value is
-    auto remainder = value % multiple;
-    
-    // Add the difference to make the value a multiple
-    if(remainder != 0)
-    {
-	    value += (multiple-remainder);
-    }
-    
-    return value;
-}
-
-float[] testImage(in size_t imageHeight, in size_t imageWidth)
-{
-    auto im = new float[imageHeight * imageWidth];
-    foreach(i; 0 .. imageHeight)
-    {
-	    foreach(j; 0 .. imageWidth)
-	    {
-	        im[i*imageWidth + j] = sin(i * j / 10.0)/* + uniform(0.0,0.2)*/;
-	    }
-    }
-    return im;
 }
 
 void main()
 {    
-    size_t imageHeight = 50, imageWidth = 50;
-    //read in image
+    size_t imageHeight = 500, imageWidth = 500;
     auto inputImage = testImage(imageHeight, imageWidth);
     
     // Size of the input and output images on the host
@@ -56,25 +24,19 @@ void main()
     auto outputImage = new float[dataSize];
     auto refImage = new float[dataSize];
     
-    // 45 degree motion blur
-    float[49] filter =
-	[0, 0, 0, 0, 0, 0, 0,
-	 0, 0, 0, 0, 0, 0, 0,
-	 0, 0,-1, 0, 1, 0, 0,
-	 0, 0,-2, 0, 2, 0, 0,
-	 0, 0,-1, 0, 1, 0, 0,
-	 0, 0, 0, 0, 0, 0, 0,
-	 0, 0, 0, 0, 0, 0, 0];
-    
-    // The convolution filter is 7x7
-    uint filterWidth = 7;  
-    uint filterSize  = filterWidth*filterWidth;  // Assume a square kernel
+    enum uint filterWidth = 3;
+    enum uint filterSize  = filterWidth*filterWidth;  // Assume a square kernel
+    //boxcar smooth
+    enum float q = 1.0/filterSize;
+    float[9] filter = q;
     
     auto platforms = CLHost.getPlatforms();
     enforce(platforms.length > 0);
     auto platform = platforms[0];
 
-    debug writefln("%s\n\t%s\n\t%s\n\t%s\n\t%s\n", platform.name, platform.vendor, platform.clversion, 
+    DerelictCL.reload(platform.clVersionId);
+
+    debug writefln("%s\n\t%s\n\t%s\n\t%s\n\t%s\n", platform.name, platform.vendor, platform.clVersion, 
                    platform.profile, platform.extensions);
     
     auto devices = platform.allDevices;
@@ -136,15 +98,17 @@ void main()
     
     // Create the kernel object
     auto kernel = CLKernel(program, "convolution");
+    debug writeln("\ncreated kernel\n");
     
     kernel.setArgs(d_inputImage,
 		   d_outputImage,
-		   imageHeight,
-		   imageWidth, 
+		   to!int(imageHeight),
+		   to!int(imageWidth), 
 		   d_filter,
-		   filterWidth,
+		   to!int(filterWidth),
 		   sampler
 	);
+    debug writeln("\nset kernel args\n");
     
     // Set the work item dimensions
     auto global = NDRange(imageWidth, imageHeight);
@@ -165,9 +129,9 @@ void main()
             refImage[i*imageWidth+j] = 0;
         }
     }
-    
+
     // Iterate over the rows of the source image
-    int halfFilterWidth = filterWidth/2;
+    int halfFilterWidth = (filterWidth-1)/2;
     float sum;
     for(size_t i = 0; i < imageHeight; i++)
     {
@@ -180,19 +144,18 @@ void main()
             {
                 for(int l = - halfFilterWidth; l <= halfFilterWidth; l++)
                 {
-                    if(i+k >= 0 && i+k < imageHeight && j+l >= 0 && j+l < imageWidth)
-                    {
-                        sum += inputImage[(i+k)*imageWidth + j+l]
-                         * filter[(k+halfFilterWidth)*filterWidth 
-                         + l+halfFilterWidth];
-                    }
-                }
+		    auto imVOff = (cast(int)(i + k)).clip(0, imageHeight - 1);
+		    auto imHOff = (cast(int)(j + l)).clip(0, imageWidth - 1);
+		    
+		    sum += inputImage[imVOff*imageWidth + imHOff]
+                         * filter[(k+halfFilterWidth)*filterWidth + l + halfFilterWidth];
+		}
             }
             refImage[i*imageWidth+j] = sum;
         }
     }
     
-    int failed = 0;
+    bool failed = false;
     for(size_t i = 0; i < imageHeight; i++)
     {
 	for(size_t j = 0; j < imageWidth; j++)
@@ -202,7 +165,7 @@ void main()
 		printf("Results are INCORRECT\n");
 		printf("Pixel mismatch at <%d,%d> (%f vs. %f)\n", i, j,
 		       outputImage[i*imageWidth+j], refImage[i*imageWidth+j]);
-		failed = 1;
+		failed = true;
 	    }
 	    if(failed) break;
 	}
@@ -212,4 +175,82 @@ void main()
     {
 	printf("Results are correct\n");
     }
+/+
+    printData(inputImage, imageHeight, imageWidth);
+    writeln();
+    printData(outputImage, imageHeight, imageWidth);
+    writeln();
+    printData(refImage, imageHeight, imageWidth);+/
+}
+
+void printData(float[] data, size_t height, size_t width)
+{
+    foreach(i; 0..height)
+    {
+	foreach(j; 0..width)
+	{
+	    writef("%8.5f ",data[i*width + j]);
+	}
+	writeln();
+    }
+}
+
+
+// This function takes a positive integer and rounds it up to
+// the nearest multiple of another provided integer
+auto roundUp(T)(T value, T multiple)
+if(isUnsigned!T)
+{
+    // Determine how far past the nearest multiple the value is
+    auto remainder = value % multiple;
+    
+    // Add the difference to make the value a multiple
+    if(remainder != 0)
+    {
+	    value += (multiple-remainder);
+    }
+    
+    return value;
+}
+
+float[] testImage(in size_t imageHeight, in size_t imageWidth)
+{
+    auto im = new float[imageHeight * imageWidth];
+    foreach(i; 0 .. imageHeight)
+    {
+	    foreach(j; 0 .. imageWidth)
+	    {
+	        im[i*imageWidth + j] = sin(i * j / 10.0)/* + uniform(0.0,0.2)*/;
+	    }
+    }
+    return im;
+}
+
+auto clipUp(T0, T1)(T0 val, T1 thresh)
+{
+    if(val >= thresh)
+    {
+	return val;
+    }
+    else
+    {
+	return thresh;
+    }
+}
+
+auto clipDown(T0, T1)(T0 val, T1 thresh)
+{
+    if(val <= thresh)
+    {
+	return val;
+    }
+    else
+    {
+	return thresh;
+    }
+}
+
+auto clip(T0,T1,T2)(T0 val, T1 bot, T2 top)
+{
+    return val.clipUp(bot).clipDown(top);
 }

@@ -17,6 +17,8 @@
     "lflags": ["-L../../lib"],
     "libs": ["cl4d"],
 
+
+
     "dependencies": {
         "derelict_extras-opencl": "~master",
 	"derelict-gl3": "~master"

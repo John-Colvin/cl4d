@@ -64,7 +64,7 @@ void main(string[] args)
     debug writeln("kernel created");
 	
     // create input vectors
-    enum VECTOR_SIZE = 10;
+    enum VECTOR_SIZE = 100000;
     int[] va = new int[VECTOR_SIZE]; foreach(int i, ref e; va) e = i;
     int[] vb = new int[VECTOR_SIZE]; foreach(int i, ref e; vb) e = cast(int) vb.length - i;
     int[] vc = new int[VECTOR_SIZE];

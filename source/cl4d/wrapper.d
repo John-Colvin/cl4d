@@ -50,11 +50,12 @@ public template CLWrapper(string T, string classInfoFunction)
 
   public:
         //! wrap OpenCL C API object
-    //! this doesn't change the reference count
+    //! this doesn't change the reference count   NOW IT DOES... IS THis OK? TODO!!!
     this(T obj)
     {
         _object = obj;
-        debug writef("wrapped %s %X\n", Tname, cast(void*) _object);
+	retain();
+        debug writefln("wrapped %s %X in instance %X", Tname, cast(void*) _object, cast(void*)&this);
     }
 
     debug private import std.stdio;
@@ -64,16 +65,18 @@ public template CLWrapper(string T, string classInfoFunction)
     {
         // increment reference count
         retain();
-        debug writef("copied %s %X. Reference count is now: %d\n", Tname, cast(void*) _object, referenceCount);
+        debug writefln("copied %s %X. Reference count is now: %d", Tname, cast(void*) _object, referenceCount);
     }
 
     //! release the object
     ~this()
     {
         if (_object is null)
-        return;
+	{
+            return;
+	}
 
-        debug writef("releasing %s %X. Reference count before: %d\n", Tname, cast(void*) _object, referenceCount);
+        debug writefln("releasing %s %X from instance %X. Reference count before: %d", Tname, cast(void*) _object, cast(void*)&this, referenceCount);
         release();
     }
 
@@ -176,13 +179,19 @@ public template CLWrapper(string T, string classInfoFunction)
      */
     // TODO: make infoname type-safe, not cl_uint (can vary for certain _object, see cl_mem)
     final U getInfo(U, alias infoFunction = classInfoFunction)(cl_uint infoname) const
+    in
+    {
+        assert(_object !is null);
+    }
+    body
     {
         cl_errcode res;
-        
+
         debug
         {
 	    size_t needed;
-	    
+
+	    auto obj = _object;
 	    // get amount of memory necessary
 	    res = infoFunction(cast(void*)_object, infoname, 0, null, &needed);
 	    
@@ -191,12 +200,10 @@ public template CLWrapper(string T, string classInfoFunction)
 	    {
 		throw new CLException(res);
             }
-
-	    assert(needed == U.sizeof);
         }
         
         U info;
-	
+
         // get actual data
         res = infoFunction(cast(void*)_object, infoname, U.sizeof, &info, null);
         

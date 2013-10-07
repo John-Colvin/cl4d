@@ -33,7 +33,9 @@ void main()
     enforce(platforms.length > 0);
     auto platform = platforms[0];
 
+    debug writeln(DerelictCL.loadedVersion);
     DerelictCL.reload(platform.clVersionId);
+    debug writeln(DerelictCL.loadedVersion);
 
     debug writefln("%s\n\t%s\n\t%s\n\t%s\n\t%s\n", platform.name, platform.vendor, platform.clVersion, 
                    platform.profile, platform.extensions);
@@ -48,6 +50,8 @@ void main()
     }
 
     auto context = CLContext(devices);
+    debug writeln("\ncreated context\n");
+
 
     auto queue = CLCommandQueue(context, devices[0]);
 
@@ -73,21 +77,29 @@ void main()
     size_t[3] origin = [0, 0, 0];  // Offset within the image to copy from
     size_t[3] region = [imageWidth, imageHeight, 1]; // Elements to per dimension
 
-    auto event = queue.enqueueWriteImage(d_inputImage, true, origin, region, cast(void*)inputImage.ptr);
+    queue.enqueueWriteImage(d_inputImage, true, origin, region, cast(void*)inputImage.ptr);
 
     // Copy the 7x7 filter to the device
-    event = queue.enqueueWriteBuffer(d_filter, true, 0, filterSize * float.sizeof, filter.ptr);
+    queue.enqueueWriteBuffer(d_filter, true, 0, filterSize * float.sizeof, filter.ptr);
+
+    debug writeln("\ndata moved to device\n");
 
     // Create the image sampler
     auto sampler = CLSampler(context, false, CL_ADDRESS_CLAMP_TO_EDGE, CL_FILTER_NEAREST);
 
+    debug writeln("\nsampler created\n");
 
     auto source = readText("convolution.cl");
     
     // Create a program object with source and build it
     auto program = context.createProgram(clDbgInfo!() ~ source);
-    program.build("-O3 -w -Werror");
     
+    debug writeln("\nprogram created\n");
+
+    program.build("-w -Werror");
+    
+    debug writeln("\nprogram built\n");
+
     // Create the kernel object
     auto kernel = CLKernel(program, "convolution");
     
@@ -102,7 +114,7 @@ void main()
     
     // Set the work item dimensions
     auto global = NDRange(imageWidth, imageHeight);
-    event = queue.enqueueNDRangeKernel(kernel, global);
+    auto event = queue.enqueueNDRangeKernel(kernel, global);
 
     //wait for work to finish
     event.wait();
@@ -121,6 +133,11 @@ void main()
     writeln();
     printData(refImage, imageHeight, imageWidth);+/
 }
+
+
+/**
+ * Extras for verification of results and printing. Not used at all for the openCL code itself
+ */
 
 void verify(float[] inputImage, size_t imageHeight, size_t imageWidth, float[] filter, size_t filterWidth, float[] outputImage)
 {
@@ -191,7 +208,7 @@ if(isUnsigned!T)
     // Add the difference to make the value a multiple
     if(remainder != 0)
     {
-	    value += (multiple-remainder);
+        value += (multiple-remainder);
     }
     
     return value;
@@ -202,10 +219,10 @@ float[] testImage(in size_t imageHeight, in size_t imageWidth)
     auto im = new float[imageHeight * imageWidth];
     foreach(i; 0 .. imageHeight)
     {
-	    foreach(j; 0 .. imageWidth)
-	    {
-	        im[i*imageWidth + j] = sin(i * j / 10.0)/* + uniform(0.0,0.2)*/;
-	    }
+        foreach(j; 0 .. imageWidth)
+        {
+            im[i*imageWidth + j] = sin(i * j / 10.0)/* + uniform(0.0,0.2)*/;
+        }
     }
     return im;
 }

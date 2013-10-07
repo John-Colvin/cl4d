@@ -19,6 +19,7 @@
 
     "dependencies": {
         "derelict_extras-opencl": "~master",
-        "derelict-util": "~master"
+        "derelict-util": "~master",
+	"derelict-gl3": "~master"
     },
 }

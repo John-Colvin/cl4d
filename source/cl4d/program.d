@@ -92,7 +92,7 @@ public:
     CLProgram build(string options = "", CLDevices devices = CLDevices())
     {
         cl_errcode res;
-        
+
         // If pfn_notify isn't NULL, clBuildProgram does not need to wait for the build to complete and can return immediately
         // If pfn_notify is NULL, clBuildProgram does not return until the build has completed
         // TODO: rather use callback?

@@ -22,9 +22,13 @@ void main(string[] args)
 
     auto platform = platforms[0];
 
-    writefln("%s\n\t%s\n\t%s\n\t%s\n\t%s", platform.name, platform.vendor, platform.clversion, 
+    debug writefln("%s\n\t%s\n\t%s\n\t%s\n\t%s", platform.name, platform.vendor, platform.clVersion, 
 	     platform.profile, platform.extensions);
-	
+    
+    debug writeln(DerelictCL.loadedVersion);
+    DerelictCL.reload(platform.clVersionId);
+    debug writeln(DerelictCL.loadedVersion);
+
     auto devices = platform.allDevices;
     if (devices.length < 1)
     {
@@ -33,7 +37,7 @@ void main(string[] args)
     }
 	
 	
-    foreach(CLDevice device; devices)
+    debug foreach(CLDevice device; devices)
     {
 	writefln("%s\n\t%s\n\t%s\n\t%s\n\t%s", device.name, device.vendor, device.driverVersion,
 		 device.clVersion, device.profile, device.extensions);
@@ -43,7 +47,7 @@ void main(string[] args)
 	
     // Create a command queue and use the first device
     auto queue = CLCommandQueue(context, devices[0]);
-    auto program = context.createProgram( 
+    auto program = context.createProgram(
 	clDbgInfo!() ~ q{
 	    __kernel void sum(__global const int* a, __global const int* b, __global int* c)
 	    {
@@ -51,16 +55,16 @@ void main(string[] args)
 		c[i] = a[i] + b[i];
 	    }
 	});
-    program.build("-O3 -w -Werror");
-    writeln(program.buildLog(devices[0]));
+    program.build("-w -Werror");
+    debug writeln(program.buildLog(devices[0]));
 	
-    writeln("program built");
+    debug writeln("program built");
 
     auto kernel = CLKernel(program, "sum");
-    writeln("kernel created");
+    debug writeln("kernel created");
 	
     // create input vectors
-    enum VECTOR_SIZE = 10000000;
+    enum VECTOR_SIZE = 10;
     int[] va = new int[VECTOR_SIZE]; foreach(int i, ref e; va) e = i;
     int[] vb = new int[VECTOR_SIZE]; foreach(int i, ref e; vb) e = cast(int) vb.length - i;
     int[] vc = new int[VECTOR_SIZE];
@@ -69,33 +73,37 @@ void main(string[] args)
     auto bufferA = CLBuffer(context, CL_MEM_READ_ONLY  | CL_MEM_USE_HOST_PTR, VECTOR_SIZE * int.sizeof, va.ptr);
     auto bufferB = CLBuffer(context, CL_MEM_READ_ONLY  | CL_MEM_USE_HOST_PTR, VECTOR_SIZE * int.sizeof, vb.ptr);
     auto bufferC = CLBuffer(context, CL_MEM_WRITE_ONLY | CL_MEM_USE_HOST_PTR, VECTOR_SIZE * int.sizeof, vc.ptr);
-    writeln("allocated buffers");
+    debug writeln("allocated buffers");
 
-    // Copy lists A and B to the memory buffers
-    //	queue.enqueueWriteBuffer(bufferA, CL_TRUE, 0, va.sizeof, va.ptr);
-    //	queue.enqueueWriteBuffer(bufferB, CL_TRUE, 0, vb.sizeof, vb.ptr);
-	
     // Set arguments to kernel
     kernel.setArgs(bufferA, bufferB, bufferC);
-    writeln("arguments set");
+    debug writeln("arguments set");
 	
     // Run the kernel on specific ND range
     auto global	= NDRange(VECTOR_SIZE);
-    //auto local	= NDRange(1);
-    auto sw = StopWatch();
-    sw.start();
+    
+    version(bench)
+    {
+        auto sw = StopWatch();
+	sw.start();
+    }
     CLEvent execEvent = queue.enqueueNDRangeKernel(kernel, global);
-//    queue.flush();
+
     // wait for the kernel to be executed
     execEvent.wait();
-    sw.stop();
-    writeln("\n\n",sw.peek().usecs,"\n\n");
-    // Read buffer vc into a local list
-    // TODO: figure out why this call is needed even though CL_MEM_USE_HOST_PTR is used
-//    queue.enqueueReadBuffer(bufferC, CL_TRUE, 0, vc.sizeof, vc.ptr);
+
+    version(bench)
+    {
+        sw.stop();
+        writeln("\n\n",sw.peek().usecs,"\n\n");
+    }
+
+    //map the memory back to the host.
+    auto tmp = cast(ubyte[])vc;
+    queue.enqueueMapBuffer(bufferC, true, CL_MAP_READ, 0, VECTOR_SIZE * int.sizeof, tmp);
 	
     foreach(i,e; vc)
     {
-	enforce(e == VECTOR_SIZE);
+        enforce(e == VECTOR_SIZE);
     }
 }

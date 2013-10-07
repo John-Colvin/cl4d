@@ -3,7 +3,7 @@ cl4d
 
 object-oriented wrapper for the OpenCL C API written in the D programming language
 
-This is a fork containing work from Vauru's fork with several modifications. The original code is by Trass3r.
+This is a fork containing work from Vuaru's fork with several modifications. The original code is by Trass3r.
 
 The recommended usage is to list as a depedency in dub.
 
